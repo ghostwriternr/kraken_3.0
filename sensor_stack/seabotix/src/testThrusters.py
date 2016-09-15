@@ -6,13 +6,12 @@
 
 # It creates a handle for the serial port in the Arduino and then writes
 # the data to be fed to the thrusters directly to this serial port.
-
 # It does so using a while loop.
 
-# TODO:
-
-# - Ctrl+C handling
-# - Write a bash script to start this up directly from the repo root.
+# When this script is run, and then, Ctrl+C is pressed in the terminal, then
+# it sends a speed value of 0 to the arduino and closes the serial port
+# and exits the program. If the vehicle doesn't stop immediately, then, wait for
+# some time. (A little lag is normal, and expected)
 
 PKG = 'seabotix'
 
@@ -39,6 +38,7 @@ sb.stopbits = 1
 def stopThrustersNow(s=None, f=None):
 
     print "Stopping thrusters now!"
+    global zero_speed_set
     zero_speed_set = True
     # signal.alarm(2)
     # sys.exit(0)
@@ -95,12 +95,13 @@ if __name__ == '__main__':
 	except:
 	    rate = default_rate
     else:
-	if 'ROS_RATE' in os.environ:
-	    rate = int(os.environ['ROS_RATE'])
+        if rospy.has_param('/ros_rate'):
+	    rate = rospy.get_param('/ros_rate');
 	else:
 	    rate = default_rate
   
     r = rospy.Rate(rate)
+    rospy.loginfo("Running at ROS Rate of %0.2f Hz", rate);
 
     print "Entering While Loop"
     # while not rospy.is_shutdown():
@@ -113,8 +114,9 @@ if __name__ == '__main__':
             for j in range(0,3):
                 sb.write(str(chr(int(data[i][j] if not zero_speed_set else dataZero[i][j]))))
                 # print "Single Thuster Data-point completed." # Total 18 data-points
+
 	if zero_speed_set:
-	    sys.exit(0)
+            break
 		
         print "Cycle Ended."
 	i += 1
